@@ -52,6 +52,7 @@ create or replace package body honorary_employees is
                                         'Honorary ' || new_job.JOB_TITLE,
                                         new_job.MIN_SALARY+(new_job.MIN_SALARY/100)*15,
                                         new_job.MAX_SALARY+(new_job.MAX_SALARY/100)*15);
+	    commit;
           end if;
         else raise exc_HonorName;
         end if;
@@ -102,7 +103,6 @@ create or replace package body honorary_employees is
         select DEPARTMENT_ID into v_employee_department from EMPLOYEES e where e.EMPLOYEE_ID = v_employee_id;
         --Create new Honorary contract in JOBS
         create_honor_jobs(v_employee_job_id);
-        commit;
         v_employee_new_job := 'HON_' || v_employee_job_id;
 
         insert into JOB_HISTORY values (v_employee_id,
@@ -136,7 +136,6 @@ create or replace package body honorary_employees is
         --Create new Honorary contract in JOBS based on old employee contract
         select * into v_employee_old_contract from JOB_HISTORY where EMPLOYEE_ID = v_employee_id and JOB_ID = v_employee_job_id;
         create_honor_jobs(v_employee_old_contract.JOB_ID);
-        commit;
         v_employee_new_job := 'HON_' || v_employee_old_contract.JOB_ID;
 
 
