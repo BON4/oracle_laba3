@@ -8,21 +8,6 @@ select * from EMPLOYEES;
 rollback;
 --Create hon contracts
 
-alter table JOBS
-  modify (
-JOB_ID varchar2(30),
-JOB_TITLE varchar2(50)
-  );
-
-alter table EMPLOYEES
-  modify (
-JOB_ID varchar2(30)
-  );
-
-alter table JOB_HISTORY
-  modify (
-JOB_ID varchar2(30));
-
 create or replace package honorary_employees as
   procedure create_honor_jobs(old_job_id varchar2);
 
@@ -176,6 +161,23 @@ create or replace package body honorary_employees is
     end;
 end honorary_employees;
 
+--ЗАПУСКАТЬ ЭТО
+alter table JOBS
+  modify (
+JOB_ID varchar2(30),
+JOB_TITLE varchar2(50)
+  );
+
+alter table EMPLOYEES
+  modify (
+JOB_ID varchar2(30)
+  );
+
+alter table JOB_HISTORY
+  modify (
+JOB_ID varchar2(30));
+
+--ПОТОМ ЭТО
 begin
   for v_curs in (select * from EMPLOYEES) loop
     if instr(v_curs.JOB_ID, 'HON_') = 0  then
@@ -185,28 +187,10 @@ begin
     end if;
   end loop;
 end;
-
-select *from EMPLOYEES where EMPLOYEE_ID = 102;
+--END
 
 
 --№2;
-create table emp_passwords(
-  employee_id numeric,
-  username varchar2(200),
-  password varchar2(200)
-);
-
-select * from emp_passwords;
-delete from emp_passwords;
-
-ALTER TABLE emp_passwords
-ADD CONSTRAINT myemp_fk
-       		 FOREIGN KEY (employee_id)
-        	  REFERENCES MYEMPLOYEES (employee_id)
-              ON DELETE CASCADE;
-
-select * from MYEMPLOYEES;
-
 create or replace package password_module as
   v_username emp_passwords.username%type;
   v_password emp_passwords.password%type;
@@ -313,7 +297,23 @@ create or replace package body password_module is
 end password_module;
 
 
+--ЗАПУСКАТЬ ЭТО
+create table emp_passwords(
+  employee_id numeric,
+  username varchar2(200),
+  password varchar2(200)
+);
+
+ALTER TABLE emp_passwords
+ADD CONSTRAINT myemp_fk
+       		 FOREIGN KEY (employee_id)
+        	  REFERENCES MYEMPLOYEES (employee_id)
+              ON DELETE CASCADE;
+
 alter session set nls_sort=BINARY;
+
+
+--ПОТОМ ЭТО
 begin
   password_module.update_passwords();
 end;
