@@ -180,7 +180,7 @@ JOB_ID varchar2(30));
 begin
   for v_curs in (select * from EMPLOYEES) loop
     if instr(v_curs.JOB_ID, 'HON_') = 0  then
-      if TO_CHAR(v_curs.HIRE_DATE, 'YYYY') = '2008' then
+      if TO_CHAR(v_curs.HIRE_DATE, 'YYYY') = '2003' then
         honorary_employees.prepare_give_honor_contract(v_curs.EMPLOYEE_ID, v_curs.HIRE_DATE, v_curs.HIRE_DATE+360);
       end if;
     end if;
