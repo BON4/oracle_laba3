@@ -1,30 +1,17 @@
 --Laba 3
 
 --№1
-select * from JOB_HISTORY;
-
-select * from JOBS;
-select * from EMPLOYEES;
-rollback;
 --Create hon contracts
 
+​
 create or replace package honorary_employees as
   procedure create_honor_jobs(old_job_id varchar2);
-
-  procedure prepare_give_honor_contract(v_employee_id EMPlOYEES.EMPLOYEE_ID%type,
-                                start_cont_date JOB_HISTORY.START_DATE%type,
-                                end_cont_date JOB_HISTORY.END_DATE%type);
-
-  procedure update_honor_contract(v_employee_id EMPlOYEES.EMPLOYEE_ID%type,
-                                v_employee_job_id EMPlOYEES.JOB_ID%type,
-                                start_cont_date JOB_HISTORY.START_DATE%type,
-                                end_cont_date JOB_HISTORY.END_DATE%type);
-
+​
   procedure create_honor_contract(v_employee_id EMPlOYEES.EMPLOYEE_ID%type,
                                 start_cont_date JOB_HISTORY.START_DATE%type,
                                 end_cont_date JOB_HISTORY.END_DATE%type);
 end honorary_employees;
-
+​
 create or replace package body honorary_employees is
   --Accept old_job_id and new_job_id with "HON_" sufix and add to JOBS table
   procedure create_honor_jobs(old_job_id varchar2) as
@@ -38,21 +25,20 @@ create or replace package body honorary_employees is
       Select count(*) into v_job_exist
         from JOBS j
         where j.JOB_ID = old_job_id;
-
+​
       if v_job_exist != 0 then
         if instr(old_job_id, 'HON_') = 0 then
           new_job_id := 'HON_' || old_job_id;
           Select count(*) into v_column_exists
           from JOBS j
           where j.JOB_ID = new_job_id;
-
+​
           if v_column_exists = 0 then
             select * into new_job from JOBS where JOB_ID = old_job_id;
             insert into JOBS j values (new_job_id,
                                         'Honorary ' || new_job.JOB_TITLE,
                                         new_job.MIN_SALARY+(new_job.MIN_SALARY/100)*15,
                                         new_job.MAX_SALARY+(new_job.MAX_SALARY/100)*15);
-	    commit;
           end if;
         else raise exc_HonorName;
         end if;
@@ -62,39 +48,17 @@ create or replace package body honorary_employees is
       when exc_HonorName then raise_application_error(-20000, 'Honorary job contracts can not be created as "honorary"');
       when exc_JobNotExist then raise_application_error(-20000, 'Given job does not exist');
     end;
-
-  --Separate create and update honor procedures, the main procedure
-  procedure prepare_give_honor_contract(v_employee_id EMPlOYEES.EMPLOYEE_ID%type,
-                                start_cont_date JOB_HISTORY.START_DATE%type,
-                                end_cont_date JOB_HISTORY.END_DATE%type) as
-    v_count_Emp_Contracts numeric := 0;
-    begin
-      --Count how many contracts employee have
-      Select count(*) into v_count_Emp_Contracts
-        from JOB_HISTORY j
-        where j.EMPLOYEE_ID = v_employee_id;
-
-      if v_count_Emp_Contracts > 0 then
-        --If some employee have many contracts we should update them all
-        for v_curs in (select * from JOB_HISTORY j where j.EMPLOYEE_ID = v_employee_id) loop
-          update_honor_contract(v_employee_id,v_curs.JOB_ID , start_cont_date, end_cont_date);
-        end loop;
-      elsif v_count_Emp_Contracts = 0 then
-        --If he have nothing we should create one for him
-        create_honor_contract(v_employee_id, start_cont_date, end_cont_date);
-      end if;
-    end;
-
+​
   --Create contract
   procedure create_honor_contract(v_employee_id EMPlOYEES.EMPLOYEE_ID%type,
                                 start_cont_date JOB_HISTORY.START_DATE%type,
                                 end_cont_date JOB_HISTORY.END_DATE%type) as
-
+​
     v_employee_job_id EMPLOYEES.JOB_ID%type;
     v_employee_department DEPARTMENTS.DEPARTMENT_ID%TYPE;
     v_employee_new_job EMPLOYEES.JOB_ID%TYPE;
     v_emp_comm_pct EMPLOYEES.COMMISSION_PCT%type;
-
+​
     exc_Emp_NoContract EXCEPTION;
     begin
       --Take old job_id to create new one
@@ -103,51 +67,16 @@ create or replace package body honorary_employees is
         select DEPARTMENT_ID into v_employee_department from EMPLOYEES e where e.EMPLOYEE_ID = v_employee_id;
         --Create new Honorary contract in JOBS
         create_honor_jobs(v_employee_job_id);
+        commit;
         v_employee_new_job := 'HON_' || v_employee_job_id;
-
+​
         insert into JOB_HISTORY values (v_employee_id,
                                         start_cont_date, end_cont_date, v_employee_new_job,
                                         v_employee_department);
-
+​
         --Now we need to change JOB_ID in employees table
         update EMPLOYEES set JOB_ID = v_employee_new_job where EMPLOYEE_ID = v_employee_id;
-        --Set new commission pact
-        select COMMISSION_PCT into v_emp_comm_pct from EMPLOYEES where EMPLOYEE_ID = v_employee_id;
-        if v_emp_comm_pct is null then
-          update EMPLOYEES set COMMISSION_PCT = 0.2 where EMPLOYEE_ID = v_employee_id;
-        else
-          if v_emp_comm_pct < 0.2 then
-            update EMPLOYEES set COMMISSION_PCT = 0.2 where EMPLOYEE_ID = v_employee_id;
-          end if;
-        end if;
-    end;
-
-  --Update already ageist contract to Honorary
-  procedure update_honor_contract(v_employee_id EMPlOYEES.EMPLOYEE_ID%type,
-                                v_employee_job_id EMPlOYEES.JOB_ID%type,
-                                start_cont_date JOB_HISTORY.START_DATE%type,
-                                end_cont_date JOB_HISTORY.END_DATE%type) as
-    v_employee_new_job EMPLOYEES.JOB_ID%TYPE;
-    v_employee_old_contract JOB_HISTORY%ROWTYPE;
-    v_emp_comm_pct EMPLOYEES.COMMISSION_PCT%type;
-
-    exc_Emp_NoContract EXCEPTION;
-    begin
-        --Create new Honorary contract in JOBS based on old employee contract
-        select * into v_employee_old_contract from JOB_HISTORY where EMPLOYEE_ID = v_employee_id and JOB_ID = v_employee_job_id;
-        create_honor_jobs(v_employee_old_contract.JOB_ID);
-        v_employee_new_job := 'HON_' || v_employee_old_contract.JOB_ID;
-
-
-        --Now we need to change JOB_ID in employees table
-        update EMPLOYEES set JOB_ID = v_employee_new_job where EMPLOYEE_ID = v_employee_id;
-
-        --Change JOB_ID in JOB_HISTORY
-        update JOB_HISTORY set JOB_ID = v_employee_new_job, START_DATE = start_cont_date, END_DATE = end_cont_date
-          where EMPLOYEE_ID = v_employee_old_contract.EMPLOYEE_ID
-                and JOB_ID = v_employee_old_contract.JOB_ID
-                and DEPARTMENT_ID = v_employee_old_contract.DEPARTMENT_ID;
-
+​
         --Set new commission pact
         select COMMISSION_PCT into v_emp_comm_pct from EMPLOYEES where EMPLOYEE_ID = v_employee_id;
         if v_emp_comm_pct is null then
@@ -181,7 +110,7 @@ begin
   for v_curs in (select * from EMPLOYEES) loop
     if instr(v_curs.JOB_ID, 'HON_') = 0  then
       if TO_CHAR(v_curs.HIRE_DATE, 'YYYY') = '2003' then
-        honorary_employees.prepare_give_honor_contract(v_curs.EMPLOYEE_ID, v_curs.HIRE_DATE, v_curs.HIRE_DATE+360);
+        honorary_employees.create_honor_contract(v_curs.EMPLOYEE_ID, current_date, current_date+360);
       end if;
     end if;
   end loop;
